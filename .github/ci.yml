@@ -1,0 +1,59 @@
+# Nombre del workflow. Es lo que vas a ver en la pestaña "Actions" de
+# GitHub para identificar qué corrió.
+name: CI
+
+# "on" define CUÁNDO se dispara este workflow.
+on:
+  # Se ejecuta cada vez que se hace un push a las ramas main o master.
+  push:
+    branches: [main, master]
+  # También se ejecuta cuando se abre o actualiza un Pull Request hacia
+  # esas mismas ramas (útil más adelante si trabajás con ramas separadas).
+  pull_request:
+    branches: [main, master]
+
+# "jobs" agrupa los conjuntos de tareas a ejecutar. Podés tener varios
+# jobs corriendo en paralelo, pero por ahora usamos solo uno.
+jobs:
+  # Nombre interno de este job (elegido por nosotros, en español).
+  verificar-codigo:
+    # La máquina virtual donde va a correr todo esto: Ubuntu Linux,
+    # la más recomendada/estable que ofrece GitHub gratis.
+    runs-on: ubuntu-latest
+
+    # "steps" son las acciones que se ejecutan en orden, una tras otra.
+    steps:
+      # Paso 1: descarga el código de tu repositorio dentro de la
+      # máquina virtual. "uses" significa que estamos usando una acción
+      # ya hecha por GitHub (no un comando nuestro) -- @v4 es la versión
+      # de esa acción.
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      # Paso 2: instala Node.js en la máquina virtual, en la misma
+      # versión que usás en tu Fedora (v22), para evitar diferencias
+      # entre tu máquina y el entorno de CI.
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm # guarda en caché las dependencias para que futuros runs sean más rápidos
+
+      # Paso 3: instala las dependencias del proyecto. "run" significa
+      # que este paso ejecuta un comando de terminal directo (no una
+      # acción prearmada como los pasos anteriores).
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Paso 4: le pedimos a TypeScript que revise todo el proyecto en
+      # busca de errores de tipos, sin generar ningún archivo de salida
+      # (--noEmit). Si hay un error de tipos en cualquier archivo, este
+      # paso falla y todo el workflow se marca en rojo.
+      - name: Verificar tipos de TypeScript
+        run: npx tsc --noEmit
+
+      # Paso 5: corre el linter del proyecto (ya definido en tu
+      # package.json como "npm run lint"), que revisa problemas de
+      # calidad/estilo de código más allá de los tipos.
+      - name: Correr el linter
+        run: npm run lint
